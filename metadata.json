@@ -1,0 +1,6 @@
+{
+  "name": "Mindful Journal",
+  "description": "A private, mindful journaling web application with interactive reflections, emotional growth analytics, multilingual voice dictation, and visual memory integration.",
+  "requestFramePermissions": ["microphone", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
