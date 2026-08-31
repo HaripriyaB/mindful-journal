@@ -7,7 +7,9 @@ import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+// Cloud Run (and most hosts) inject the port to bind to via process.env.PORT;
+// hardcoding a port here breaks deployment since the platform won't route to it.
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
@@ -223,6 +225,7 @@ app.post('/api/gemini/chat-stream', async (req, res) => {
 
     // Try streaming across fallback models if primary model is experiencing high demand
     for (const model of FALLBACK_MODELS) {
+      let chunkSentThisAttempt = false;
       try {
         const streamResponse = await ai.models.generateContentStream({
           model: model,
@@ -238,6 +241,7 @@ app.post('/api/gemini/chat-stream', async (req, res) => {
         for await (const chunk of streamResponse) {
           const text = chunk.text;
           if (text) {
+            chunkSentThisAttempt = true;
             sendEvent({ chunk: text });
           }
         }
@@ -247,7 +251,16 @@ app.post('/api/gemini/chat-stream', async (req, res) => {
         streamSucceeded = true;
         break;
       } catch {
-        // Continue to next model cascade quietly
+        // If we already streamed partial content to the client, switching to
+        // another model would append unrelated text and produce garbled output.
+        // Just end the response here instead of retrying with a different model.
+        if (chunkSentThisAttempt) {
+          sendEvent({ done: true });
+          res.end();
+          streamSucceeded = true;
+          break;
+        }
+        // No content sent yet, safe to continue to next model cascade quietly
       }
     }
 
@@ -420,16 +433,25 @@ Return a strictly valid JSON object (NO markdown wrappers, NO extra explanation)
     });
 
     let resultJson;
-    try {
-      const cleanedText = (text || '{}').trim().replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '');
-      resultJson = JSON.parse(cleanedText);
-    } catch (e) {
-      const fullText = text || '';
-      const start = fullText.indexOf('{');
-      const end = fullText.lastIndexOf('}');
-      if (start !== -1 && end !== -1) {
-        resultJson = JSON.parse(fullText.substring(start, end + 1));
-      } else {
+    if (!text) {
+      resultJson = fallbackResult;
+    } else {
+      try {
+        const cleanedText = text.trim().replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '');
+        resultJson = JSON.parse(cleanedText);
+      } catch (e) {
+        const start = text.indexOf('{');
+        const end = text.lastIndexOf('}');
+        if (start !== -1 && end !== -1) {
+          resultJson = JSON.parse(text.substring(start, end + 1));
+        } else {
+          resultJson = fallbackResult;
+        }
+      }
+      // Guard against a "successfully parsed" but empty/incomplete JSON object
+      // (e.g. the model returned "{}"), which would otherwise slip past the
+      // catch block above and return a broken payload to the client.
+      if (typeof resultJson.sentimentScore !== 'number' || !resultJson.emotionBreakdown) {
         resultJson = fallbackResult;
       }
     }
@@ -498,16 +520,24 @@ Return ONLY a valid JSON object matching this schema:
     });
 
     let resultJson;
-    try {
-      const cleaned = (text || '{}').trim().replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '');
-      resultJson = JSON.parse(cleaned);
-    } catch (e) {
-      const fullText = text || '';
-      const start = fullText.indexOf('{');
-      const end = fullText.lastIndexOf('}');
-      if (start !== -1 && end !== -1) {
-        resultJson = JSON.parse(fullText.substring(start, end + 1));
-      } else {
+    if (!text) {
+      resultJson = fallbackSpeech;
+    } else {
+      try {
+        const cleaned = text.trim().replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '');
+        resultJson = JSON.parse(cleaned);
+      } catch (e) {
+        const start = text.indexOf('{');
+        const end = text.lastIndexOf('}');
+        if (start !== -1 && end !== -1) {
+          resultJson = JSON.parse(text.substring(start, end + 1));
+        } else {
+          resultJson = fallbackSpeech;
+        }
+      }
+      // Guard against a "successfully parsed" but empty/incomplete JSON object
+      // slipping past the catch block above and reaching the client.
+      if (!resultJson.translatedJournalText) {
         resultJson = fallbackSpeech;
       }
     }
@@ -602,16 +632,24 @@ Return a strictly valid JSON object with this EXACT structure:
     });
 
     let resultJson;
-    try {
-      const cleaned = (text || '{}').trim().replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '');
-      resultJson = JSON.parse(cleaned);
-    } catch (e) {
-      const fullText = text || '';
-      const start = fullText.indexOf('{');
-      const end = fullText.lastIndexOf('}');
-      if (start !== -1 && end !== -1) {
-        resultJson = JSON.parse(fullText.substring(start, end + 1));
-      } else {
+    if (!text) {
+      resultJson = fallbackReport;
+    } else {
+      try {
+        const cleaned = text.trim().replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '');
+        resultJson = JSON.parse(cleaned);
+      } catch (e) {
+        const start = text.indexOf('{');
+        const end = text.lastIndexOf('}');
+        if (start !== -1 && end !== -1) {
+          resultJson = JSON.parse(text.substring(start, end + 1));
+        } else {
+          resultJson = fallbackReport;
+        }
+      }
+      // Guard against a "successfully parsed" but empty/incomplete JSON object
+      // slipping past the catch block above and reaching the client.
+      if (!resultJson.summary || !Array.isArray(resultJson.keyMilestones)) {
         resultJson = fallbackReport;
       }
     }
