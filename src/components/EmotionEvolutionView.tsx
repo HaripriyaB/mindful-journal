@@ -35,6 +35,7 @@ import { JournalEntry, EvolutionReport } from '../types';
 import { generateEvolutionReport } from '../lib/api';
 import { EmotionEvolutionSummaryModal } from './EmotionEvolutionSummaryModal';
 import { EMOTION_CHARACTERS, CHARACTER_LIST, getCharacterForMood, EmotionCharacter } from '../lib/emotionCharacters';
+import { getEntryEmotionBreakdown, getEntrySentimentScore } from '../lib/emotionAnalytics';
 import { Waves, Disc, BookOpen, Quote, Shield } from 'lucide-react';
 
 interface EmotionEvolutionViewProps {
@@ -70,45 +71,48 @@ export const EmotionEvolutionView: React.FC<EmotionEvolutionViewProps> = ({
   const timelineData = useMemo(() => {
     return filteredEntries.map(e => {
       const dateStr = new Date(e.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      const breakdown = e.emotionAnalysis?.emotionBreakdown;
+      const breakdown = getEntryEmotionBreakdown(e);
+      const sentiment = getEntrySentimentScore(e);
       return {
         date: dateStr,
         timestamp: e.createdAt,
         title: e.title,
-        joy: breakdown?.joy ?? (e.mood === 'happy' ? 85 : 50),
-        calm: breakdown?.calm ?? (e.mood === 'peaceful' ? 90 : 60),
-        gratitude: breakdown?.gratitude ?? (e.mood === 'grateful' ? 90 : 60),
-        stress: breakdown?.stress ?? (e.mood === 'anxious' || e.mood === 'overwhelmed' ? 80 : 25),
-        inspiration: breakdown?.inspiration ?? (e.mood === 'motivated' ? 85 : 55),
-        sentiment: e.emotionAnalysis?.sentimentScore ?? 0.5
+        joy: breakdown.joy,
+        calm: breakdown.calm,
+        gratitude: breakdown.gratitude,
+        stress: breakdown.stress,
+        inspiration: breakdown.inspiration,
+        energy: breakdown.energy,
+        sadness: breakdown.sadness,
+        sentiment: sentiment
       };
     });
   }, [filteredEntries]);
 
-  // Radar chart data: Aggregate emotional balance
+  // Radar chart data: Aggregate emotional balance across 7 dimensions
   const radarData = useMemo(() => {
     if (filteredEntries.length === 0) {
       return [
-        { emotion: 'Joy', value: 65, fullMark: 100 },
-        { emotion: 'Calm', value: 80, fullMark: 100 },
-        { emotion: 'Gratitude', value: 75, fullMark: 100 },
-        { emotion: 'Inspiration', value: 70, fullMark: 100 },
-        { emotion: 'Energy', value: 60, fullMark: 100 },
-        { emotion: 'Stress', value: 20, fullMark: 100 },
-        { emotion: 'Sadness', value: 15, fullMark: 100 }
+        { emotion: 'Joy', value: 0, fullMark: 100 },
+        { emotion: 'Calm', value: 0, fullMark: 100 },
+        { emotion: 'Gratitude', value: 0, fullMark: 100 },
+        { emotion: 'Inspiration', value: 0, fullMark: 100 },
+        { emotion: 'Energy', value: 0, fullMark: 100 },
+        { emotion: 'Stress', value: 0, fullMark: 100 },
+        { emotion: 'Sadness', value: 0, fullMark: 100 }
       ];
     }
 
     let totalJoy = 0, totalCalm = 0, totalGratitude = 0, totalInspiration = 0, totalEnergy = 0, totalStress = 0, totalSadness = 0;
     filteredEntries.forEach(e => {
-      const b = e.emotionAnalysis?.emotionBreakdown;
-      totalJoy += b?.joy ?? 50;
-      totalCalm += b?.calm ?? 60;
-      totalGratitude += b?.gratitude ?? 60;
-      totalInspiration += b?.inspiration ?? 55;
-      totalEnergy += b?.energy ?? 50;
-      totalStress += b?.stress ?? 25;
-      totalSadness += b?.sadness ?? 15;
+      const b = getEntryEmotionBreakdown(e);
+      totalJoy += b.joy;
+      totalCalm += b.calm;
+      totalGratitude += b.gratitude;
+      totalInspiration += b.inspiration;
+      totalEnergy += b.energy;
+      totalStress += b.stress;
+      totalSadness += b.sadness;
     });
 
     const count = filteredEntries.length;
@@ -125,8 +129,8 @@ export const EmotionEvolutionView: React.FC<EmotionEvolutionViewProps> = ({
 
   // Overall Stats
   const averageSentiment = useMemo(() => {
-    if (filteredEntries.length === 0) return '+0.6';
-    const sum = filteredEntries.reduce((acc, e) => acc + (e.emotionAnalysis?.sentimentScore ?? 0.5), 0);
+    if (filteredEntries.length === 0) return '+0.00';
+    const sum = filteredEntries.reduce((acc, e) => acc + getEntrySentimentScore(e), 0);
     const avg = sum / filteredEntries.length;
     return avg >= 0 ? `+${avg.toFixed(2)}` : avg.toFixed(2);
   }, [filteredEntries]);
@@ -362,12 +366,16 @@ export const EmotionEvolutionView: React.FC<EmotionEvolutionViewProps> = ({
 
           <div className="h-64 w-full flex items-center justify-center my-2">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={radarData} outerRadius="70%">
+              <RadarChart data={radarData} outerRadius="68%">
                 <PolarGrid stroke="#44403c" />
-                <PolarAngleAxis dataKey="emotion" stroke="#a8a29e" fontSize={10} />
-                <PolarRadiusAxis domain={[0, 100]} stroke="#44403c" tick={false} />
+                <PolarAngleAxis dataKey="emotion" stroke="#d6d3d1" fontSize={11} />
+                <PolarRadiusAxis domain={[0, 100]} stroke="#44403c" tick={{ fill: '#78716c', fontSize: 9 }} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#1c1917', borderColor: '#44403c', borderRadius: '12px', color: '#f5f5f4', fontSize: '12px' }}
+                  formatter={(val: any) => [`${val}%`, 'Intensity']}
+                />
                 <Radar
-                  name="Balance"
+                  name="Intensity"
                   dataKey="value"
                   stroke="#f59e0b"
                   fill="#f59e0b"

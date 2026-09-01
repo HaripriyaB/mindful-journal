@@ -222,10 +222,10 @@ export const VoiceRecorderModal: React.FC<VoiceRecorderModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/80 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-stone-900 border border-stone-800 text-stone-100 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-stone-950/80 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-stone-900 border border-stone-800 text-stone-100 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-stone-800 flex items-center justify-between bg-stone-900/50">
+        <div className="px-6 py-4 border-b border-stone-800 flex items-center justify-between bg-stone-900/50 shrink-0">
           <div className="flex items-center space-x-2.5">
             <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400">
               <Languages className="w-5 h-5" />
@@ -248,7 +248,7 @@ export const VoiceRecorderModal: React.FC<VoiceRecorderModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-5 overflow-y-auto flex-1">
           {/* Language Selector */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold uppercase tracking-wider text-stone-400">
@@ -409,7 +409,7 @@ export const VoiceRecorderModal: React.FC<VoiceRecorderModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-4 bg-stone-900/80 border-t border-stone-800 flex items-center justify-end space-x-3">
+        <div className="px-6 py-4 bg-stone-900/80 border-t border-stone-800 flex items-center justify-end space-x-3 shrink-0">
           <button
             type="button"
             onClick={onClose}

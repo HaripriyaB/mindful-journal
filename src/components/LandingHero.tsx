@@ -37,8 +37,14 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ onAuthSuccess }) => {
       console.error('Login error:', err);
       if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user' || err.message?.includes('popup')) {
         setErrorMsg('Sign-in popup was closed. You can also sign in as a guest to test the journal immediately.');
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setErrorMsg('Google Sign-In is not enabled in the Firebase console. Please enable it under Authentication → Sign-in method → Google.');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setErrorMsg('This domain is not authorised in Firebase. Add it under Authentication → Settings → Authorised domains.');
+      } else if (err.code === 'auth/invalid-api-key') {
+        setErrorMsg('Invalid Firebase API key. Check your firebase-applet-config.json.');
       } else {
-        setErrorMsg('Could not complete Google Sign-In. You can continue as a Guest.');
+        setErrorMsg(`Sign-In failed: ${err.message || 'Unknown error'}. You can continue as a Guest.`);
       }
     } finally {
       setLoading(false);

@@ -346,33 +346,79 @@ ${content.slice(0, 1500)}
   }
 });
 
-// 2. Emotion Evolution & Structured Sentiment Analysis
-app.post('/api/gemini/analyze-emotions', async (req, res) => {
-  const { title, content, mood, chatMessages } = req.body;
+function deriveEmotionAnalysisLocally(title?: string, content?: string, mood?: string) {
+  const cleanMood = (mood || 'peaceful').toLowerCase();
+  const text = `${title || ''} ${content || ''}`.toLowerCase();
 
-  const fallbackResult = {
-    sentimentScore: 0.65,
-    primaryEmotion: mood ? mood.charAt(0).toUpperCase() + mood.slice(1) : "Reflective & Mindful",
-    emotionBreakdown: {
-      joy: 65,
-      calm: 80,
-      gratitude: 70,
-      stress: 20,
-      sadness: 10,
-      inspiration: 75,
-      energy: 60
-    },
-    growthInsight: "Writing down your reflections creates mental clarity and grounds your awareness.",
+  let joy = 60, calm = 70, gratitude = 65, inspiration = 60, energy = 55, stress = 20, sadness = 15;
+  let primary = 'Reflective Clarity';
+  let insight = 'Writing down your reflections creates mental clarity and grounds your awareness.';
+
+  if (cleanMood === 'happy') {
+    joy = 90; calm = 72; gratitude = 80; inspiration = 75; energy = 85; stress = 15; sadness = 5;
+    primary = 'Radiant Joy';
+    insight = 'Your positivity is a vital reservoir of resilience for moments of challenge.';
+  } else if (cleanMood === 'peaceful') {
+    joy = 75; calm = 95; gratitude = 85; inspiration = 70; energy = 55; stress = 10; sadness = 5;
+    primary = 'Grounded Serenity';
+    insight = 'Finding stillness in the present moment is where deepest renewal happens.';
+  } else if (cleanMood === 'grateful') {
+    joy = 85; calm = 85; gratitude = 98; inspiration = 80; energy = 70; stress = 10; sadness = 5;
+    primary = 'Deep Gratitude';
+    insight = 'Gratitude turns what you have into enough, amplifying everyday grace.';
+  } else if (cleanMood === 'motivated') {
+    joy = 80; calm = 60; gratitude = 70; inspiration = 95; energy = 92; stress = 25; sadness = 5;
+    primary = 'Focused Drive';
+    insight = 'Channeling your inspiration into deliberate action creates lasting momentum.';
+  } else if (cleanMood === 'contemplative') {
+    joy = 55; calm = 80; gratitude = 75; inspiration = 82; energy = 50; stress = 20; sadness = 18;
+    primary = 'Thoughtful Introspection';
+    insight = 'Quiet reflection gives subconscious wisdom the space it needs to surface.';
+  } else if (cleanMood === 'anxious') {
+    joy = 20; calm = 15; gratitude = 30; inspiration = 25; energy = 65; stress = 90; sadness = 45;
+    primary = 'Restless Tension';
+    insight = 'Anxiety is energy without direction; breathing slowly grounds your nervous system.';
+  } else if (cleanMood === 'overwhelmed') {
+    joy = 15; calm = 10; gratitude = 20; inspiration = 20; energy = 75; stress = 95; sadness = 55;
+    primary = 'Heavy Overwhelm';
+    insight = 'You do not have to carry everything at once. Unburden one small expectation now.';
+  } else if (cleanMood === 'sad') {
+    joy = 10; calm = 25; gratitude = 25; inspiration = 20; energy = 20; stress = 65; sadness = 92;
+    primary = 'Tender Solitude';
+    insight = 'Allowing yourself to feel grief or sorrow without judgment is the beginning of healing.';
+  }
+
+  // Text keyword tuning
+  if (/gratitude|thankful|blessed/i.test(text)) gratitude = Math.min(100, gratitude + 10);
+  if (/stress|overwhelm|pressure|deadline/i.test(text)) { stress = Math.min(100, stress + 15); calm = Math.max(0, calm - 15); }
+  if (/sad|cry|hurt|lost/i.test(text)) { sadness = Math.min(100, sadness + 15); joy = Math.max(0, joy - 15); }
+  if (/peace|still|calm|quiet/i.test(text)) { calm = Math.min(100, calm + 10); stress = Math.max(0, stress - 10); }
+
+  const positive = joy + calm + gratitude + inspiration + energy;
+  const negative = (stress * 1.3) + (sadness * 1.4);
+  const sentimentScore = Number(Math.max(-1.0, Math.min(1.0, (positive - negative) / 500)).toFixed(2));
+
+  return {
+    sentimentScore,
+    primaryEmotion: primary,
+    emotionBreakdown: { joy, calm, gratitude, stress, sadness, inspiration, energy },
+    growthInsight: insight,
     reflectionPrompts: [
-      "What is one unexpected highlight from today that made you smile?",
-      "How can you bring a sense of today's calm into your upcoming week?"
+      "What is one thought or feeling from today you want to make peace with?",
+      "What is one small kindness you can offer yourself before tomorrow?"
     ],
     actionableIdeas: [
-      "Take a 10-minute mindful walk without screens",
-      "Express gratitude to someone who crossed your mind today"
+      "Take three slow, deep mindful breaths to anchor yourself",
+      "Write down one thing you are quietly thankful for right now"
     ],
     analyzedAt: Date.now()
   };
+}
+
+// 2. Emotion Evolution & Structured Sentiment Analysis
+app.post('/api/gemini/analyze-emotions', async (req, res) => {
+  const { title, content, mood, chatMessages } = req.body;
+  const fallbackResult = deriveEmotionAnalysisLocally(title, content, mood);
 
   try {
     const key = process.env.GEMINI_API_KEY;
