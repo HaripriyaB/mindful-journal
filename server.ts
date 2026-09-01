@@ -29,8 +29,8 @@ function getAI(): GoogleGenAI {
   return aiClient;
 }
 
-// Resilient model cascade of standard, production-ready Gemini models
-const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-pro', 'gemini-3.7-flash'];
+// Resilient model cascade of standard, active Gemini models
+const FALLBACK_MODELS = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-3.5-flash-lite'];
 
 async function generateWithFallback(params: {
   contents: any;
