@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI, ThinkingLevel } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 
 dotenv.config();
 
@@ -24,18 +24,13 @@ function getAI(): GoogleGenAI {
     }
     aiClient = new GoogleGenAI({
       apiKey: key || '',
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        },
-      },
     });
   }
   return aiClient;
 }
 
-// Resilient model cascade: prioritizes high-throughput gemini-3.1-flash-lite -> gemini-3.7-flash -> gemini-flash-latest
-const FALLBACK_MODELS = ['gemini-3.1-flash-lite', 'gemini-3.7-flash', 'gemini-flash-latest'];
+// Resilient model cascade of standard, production-ready Gemini models
+const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-pro', 'gemini-3.7-flash'];
 
 async function generateWithFallback(params: {
   contents: any;
@@ -60,13 +55,13 @@ async function generateWithFallback(params: {
         return { text: response.text || null, modelUsed: model };
       } catch (err: any) {
         const errMsg = err?.message || String(err);
+        console.warn(`[Gemini API] Error calling model ${model} (attempt ${attempt + 1}/${maxRetries + 1}):`, errMsg);
         const isTransient = errMsg.includes('503') || errMsg.includes('high demand') || errMsg.includes('429') || errMsg.includes('UNAVAILABLE') || errMsg.includes('RESOURCE_EXHAUSTED');
         
         if (isTransient && attempt < maxRetries) {
           await new Promise(r => setTimeout(r, 300 * (attempt + 1)));
           continue;
         }
-        // Move to next available model quietly
         break;
       }
     }
@@ -232,7 +227,6 @@ app.post('/api/gemini/chat-stream', async (req, res) => {
           contents: contents,
           config: {
             systemInstruction: systemInstruction,
-            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
             temperature: 0.65,
             maxOutputTokens: 250
           }
@@ -289,7 +283,6 @@ app.post('/api/gemini/chat', async (req, res) => {
       contents: contents,
       config: {
         systemInstruction: systemInstruction,
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         temperature: 0.65,
         maxOutputTokens: 250
       }
@@ -328,7 +321,6 @@ ${content.slice(0, 1500)}
     const { text } = await generateWithFallback({
       contents: prompt,
       config: {
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         temperature: 0.5,
         maxOutputTokens: 30
       }
@@ -472,7 +464,6 @@ Return a strictly valid JSON object (NO markdown wrappers, NO extra explanation)
     const { text } = await generateWithFallback({
       contents: prompt,
       config: {
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         responseMimeType: 'application/json',
         temperature: 0.3
       }
@@ -559,7 +550,6 @@ Return ONLY a valid JSON object matching this schema:
     const { text } = await generateWithFallback({
       contents: prompt,
       config: {
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         responseMimeType: 'application/json',
         temperature: 0.3
       }
@@ -671,7 +661,6 @@ Return a strictly valid JSON object with this EXACT structure:
     const { text } = await generateWithFallback({
       contents: prompt,
       config: {
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         responseMimeType: 'application/json',
         temperature: 0.4
       }
@@ -727,10 +716,9 @@ app.post('/api/gemini/generate-prompt', async (req, res) => {
 
     const { text } = await generateWithFallback({
       contents: `Generate 1 unique, deeply evocative, and gentle journaling prompt for a user in category '${category || 'reflection'}' who is feeling '${currentMood || 'contemplative'}'. Make it 1-2 sentences. Do not use quotes.`,
-      config: { 
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-        temperature: 0.7,
-        maxOutputTokens: 60
+      config: {
+        temperature: 0.8,
+        maxOutputTokens: 80
       }
     });
 
@@ -790,7 +778,6 @@ Return strictly a JSON array of string tags, for example: ["mindfulness", "natur
     const { text } = await generateWithFallback({
       contents: prompt,
       config: {
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         responseMimeType: 'application/json',
         temperature: 0.3
       }
@@ -834,7 +821,6 @@ app.post('/api/gemini/photo-insight', async (req, res) => {
     const { text } = await generateWithFallback({
       contents: `Write a 2-sentence poetic, mindfulness-oriented reflection for a journal entry that includes a photo with caption: "${caption || 'Scenic memory'}" taken at location: "${locationName || 'Special place'}". Ask 1 sensory question to awaken the memory.`,
       config: { 
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         temperature: 0.7,
         maxOutputTokens: 100
       }
