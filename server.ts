@@ -24,13 +24,18 @@ function getAI(): GoogleGenAI {
     }
     aiClient = new GoogleGenAI({
       apiKey: key || '',
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
     });
   }
   return aiClient;
 }
 
 // Resilient model cascade of standard, active Gemini models
-const FALLBACK_MODELS = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-3.5-flash-lite'];
+const FALLBACK_MODELS = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
 
 async function generateWithFallback(params: {
   contents: any;
@@ -55,12 +60,14 @@ async function generateWithFallback(params: {
         return { text: response.text || null, modelUsed: model };
       } catch (err: any) {
         const errMsg = err?.message || String(err);
-        console.warn(`[Gemini API] Error calling model ${model} (attempt ${attempt + 1}/${maxRetries + 1}):`, errMsg);
         const isTransient = errMsg.includes('503') || errMsg.includes('high demand') || errMsg.includes('429') || errMsg.includes('UNAVAILABLE') || errMsg.includes('RESOURCE_EXHAUSTED');
         
-        if (isTransient && attempt < maxRetries) {
-          await new Promise(r => setTimeout(r, 300 * (attempt + 1)));
-          continue;
+        if (isTransient) {
+          // If transient error (like 503 high demand), try next model directly or retry
+          if (attempt < maxRetries) {
+            await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
+            continue;
+          }
         }
         break;
       }

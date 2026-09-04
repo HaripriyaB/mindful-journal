@@ -78,6 +78,7 @@ export interface UserProfile {
   displayName: string | null;
   photoURL: string | null;
   isAnonymous?: boolean;
+  domainUnauthorized?: boolean;
 }
 
 export interface EvolutionReport {

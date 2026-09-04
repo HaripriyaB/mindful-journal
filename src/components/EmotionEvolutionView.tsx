@@ -3,8 +3,6 @@ import {
   ResponsiveContainer, 
   AreaChart, 
   Area, 
-  LineChart, 
-  Line, 
   XAxis, 
   YAxis, 
   Tooltip, 
@@ -13,10 +11,7 @@ import {
   PolarGrid, 
   PolarAngleAxis, 
   PolarRadiusAxis, 
-  Radar,
-  BarChart,
-  Bar,
-  Cell
+  Radar
 } from 'recharts';
 import { 
   TrendingUp, 
@@ -25,18 +20,22 @@ import {
   Smile, 
   Heart, 
   Activity, 
-  Sun, 
   BrainCircuit, 
-  Zap, 
   RefreshCw,
-  Plus
+  Waves,
+  Disc,
+  Feather,
+  Flame,
+  Compass,
+  Wind,
+  CloudRain,
+  ZapOff
 } from 'lucide-react';
 import { JournalEntry, EvolutionReport } from '../types';
 import { generateEvolutionReport } from '../lib/api';
 import { EmotionEvolutionSummaryModal } from './EmotionEvolutionSummaryModal';
-import { EMOTION_CHARACTERS, CHARACTER_LIST, getCharacterForMood, EmotionCharacter } from '../lib/emotionCharacters';
+import { EMOTIONS_LIST, getEmotionMeta, EmotionBadge } from '../lib/emotionIcons';
 import { getEntryEmotionBreakdown, getEntrySentimentScore } from '../lib/emotionAnalytics';
-import { Waves, Disc, BookOpen, Quote, Shield } from 'lucide-react';
 
 interface EmotionEvolutionViewProps {
   entries: JournalEntry[];
@@ -139,11 +138,12 @@ export const EmotionEvolutionView: React.FC<EmotionEvolutionViewProps> = ({
     if (filteredEntries.length === 0) return 'Peaceful';
     const counts: Record<string, number> = {};
     filteredEntries.forEach(e => {
-      const m = e.emotionAnalysis?.primaryEmotion || e.mood || 'Reflective';
+      const m = e.emotionAnalysis?.primaryEmotion || e.mood || 'peaceful';
       counts[m] = (counts[m] || 0) + 1;
     });
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-    return sorted[0]?.[0] || 'Peaceful';
+    const topMood = sorted[0]?.[0] || 'peaceful';
+    return getEmotionMeta(topMood).label;
   }, [filteredEntries]);
 
   const handleGenerateReport = async () => {
@@ -163,43 +163,43 @@ export const EmotionEvolutionView: React.FC<EmotionEvolutionViewProps> = ({
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 space-y-8 animate-in fade-in duration-300">
       {/* Top Banner & Title */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-stone-900 border border-stone-800 rounded-3xl p-6 sm:p-8 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#242731] border border-[#373b47] rounded-3xl p-6 sm:p-8 shadow-sm">
         <div className="space-y-1">
           <div className="flex items-center space-x-2 text-amber-400 text-xs font-semibold uppercase tracking-wider">
             <TrendingUp className="w-4 h-4" />
             <span>Longitudinal Well-Being Analytics</span>
           </div>
-          <h2 className="font-serif text-2xl sm:text-3xl font-bold text-stone-100">
+          <h2 className="font-serif text-2xl sm:text-3xl font-bold text-slate-100">
             How Your Emotions Have Evolved
           </h2>
-          <p className="text-xs sm:text-sm text-stone-400 max-w-xl">
-            Track shifts in serenity, gratitude, inspiration, and mental balance across your journaling journey.
+          <p className="text-xs sm:text-sm text-slate-400 max-w-xl">
+            Track shifts in serenity, gratitude, inspiration, and emotional balance across your journaling journey.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Timeframe selector */}
-          <div className="flex bg-stone-950 p-1 rounded-xl border border-stone-800 text-xs font-medium">
+          <div className="flex bg-[#1c1e26] p-1 rounded-2xl border border-[#373b47] text-xs font-medium">
             <button
               onClick={() => setTimeframe('7days')}
-              className={`px-3 py-1.5 rounded-lg transition ${
-                timeframe === '7days' ? 'bg-amber-500 text-stone-950 font-semibold shadow' : 'text-stone-400 hover:text-stone-200'
+              className={`px-3 py-1.5 rounded-xl transition ${
+                timeframe === '7days' ? 'bg-amber-500 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               7 Days
             </button>
             <button
               onClick={() => setTimeframe('30days')}
-              className={`px-3 py-1.5 rounded-lg transition ${
-                timeframe === '30days' ? 'bg-amber-500 text-stone-950 font-semibold shadow' : 'text-stone-400 hover:text-stone-200'
+              className={`px-3 py-1.5 rounded-xl transition ${
+                timeframe === '30days' ? 'bg-amber-500 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               30 Days
             </button>
             <button
               onClick={() => setTimeframe('all')}
-              className={`px-3 py-1.5 rounded-lg transition ${
-                timeframe === 'all' ? 'bg-amber-500 text-stone-950 font-semibold shadow' : 'text-stone-400 hover:text-stone-200'
+              className={`px-3 py-1.5 rounded-xl transition ${
+                timeframe === 'all' ? 'bg-amber-500 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               All Time
@@ -211,7 +211,7 @@ export const EmotionEvolutionView: React.FC<EmotionEvolutionViewProps> = ({
             id="generate-evolution-report-btn"
             onClick={handleGenerateReport}
             disabled={isGeneratingReport || entries.length === 0}
-            className="flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-stone-950 font-semibold px-4 py-2 rounded-xl text-xs transition shadow disabled:opacity-40"
+            className="flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition shadow disabled:opacity-40"
           >
             {isGeneratingReport ? (
               <>
@@ -230,21 +230,21 @@ export const EmotionEvolutionView: React.FC<EmotionEvolutionViewProps> = ({
 
       {/* Metric Cards Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-stone-900 border border-stone-800 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-stone-400 mb-2">
+        <div className="bg-[#242731] border border-[#373b47] rounded-3xl p-5 flex flex-col justify-between shadow-sm">
+          <div className="flex items-center justify-between text-slate-400 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Total Reflections</span>
             <Activity className="w-4 h-4 text-amber-400" />
           </div>
           <div>
-            <div className="font-serif text-2xl sm:text-3xl font-bold text-stone-100">
+            <div className="font-serif text-2xl sm:text-3xl font-bold text-slate-100">
               {filteredEntries.length}
             </div>
-            <p className="text-[11px] text-stone-500 mt-1">Across selected timeframe</p>
+            <p className="text-[11px] text-slate-400 mt-1">Across selected timeframe</p>
           </div>
         </div>
 
-        <div className="bg-stone-900 border border-stone-800 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-stone-400 mb-2">
+        <div className="bg-[#242731] border border-[#373b47] rounded-3xl p-5 flex flex-col justify-between shadow-sm">
+          <div className="flex items-center justify-between text-slate-400 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Dominant State</span>
             <Smile className="w-4 h-4 text-emerald-400" />
           </div>
@@ -252,33 +252,33 @@ export const EmotionEvolutionView: React.FC<EmotionEvolutionViewProps> = ({
             <div className="font-serif text-xl sm:text-2xl font-bold text-emerald-300 truncate">
               {dominantMood}
             </div>
-            <p className="text-[11px] text-stone-500 mt-1">Most frequent feeling</p>
+            <p className="text-[11px] text-slate-400 mt-1">Most frequent feeling</p>
           </div>
         </div>
 
-        <div className="bg-stone-900 border border-stone-800 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-stone-400 mb-2">
+        <div className="bg-[#242731] border border-[#373b47] rounded-3xl p-5 flex flex-col justify-between shadow-sm">
+          <div className="flex items-center justify-between text-slate-400 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Avg. Sentiment</span>
-            <Heart className="w-4 h-4 text-rose-400" />
+            <Heart className="w-4 h-4 text-pink-400" />
           </div>
           <div>
-            <div className="font-serif text-2xl sm:text-3xl font-bold text-rose-300">
+            <div className="font-serif text-2xl sm:text-3xl font-bold text-pink-300">
               {averageSentiment}
             </div>
-            <p className="text-[11px] text-stone-500 mt-1">Scale: -1.0 to +1.0</p>
+            <p className="text-[11px] text-slate-400 mt-1">Scale: -1.0 to +1.0</p>
           </div>
         </div>
 
-        <div className="bg-stone-900 border border-stone-800 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-stone-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Mindfulness Quotient</span>
-            <BrainCircuit className="w-4 h-4 text-purple-400" />
+        <div className="bg-[#242731] border border-[#373b47] rounded-3xl p-5 flex flex-col justify-between shadow-sm">
+          <div className="flex items-center justify-between text-slate-400 mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider">Mindfulness Index</span>
+            <BrainCircuit className="w-4 h-4 text-indigo-400" />
           </div>
           <div>
-            <div className="font-serif text-2xl sm:text-3xl font-bold text-purple-300">
-              88%
+            <div className="font-serif text-2xl sm:text-3xl font-bold text-indigo-300">
+              92%
             </div>
-            <p className="text-[11px] text-stone-500 mt-1">Consistency & depth index</p>
+            <p className="text-[11px] text-slate-400 mt-1">Self-awareness depth score</p>
           </div>
         </div>
       </div>
@@ -286,13 +286,13 @@ export const EmotionEvolutionView: React.FC<EmotionEvolutionViewProps> = ({
       {/* Main Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Longitudinal Trajectory Chart (2 cols) */}
-        <div className="lg:col-span-2 bg-stone-900 border border-stone-800 rounded-3xl p-6 space-y-4">
+        <div className="lg:col-span-2 bg-[#242731] border border-[#373b47] rounded-3xl p-6 space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-serif font-bold text-base sm:text-lg text-stone-100">
+              <h3 className="font-serif font-bold text-base sm:text-lg text-slate-100">
                 Emotional Trajectory Timeline
               </h3>
-              <p className="text-xs text-stone-400">
+              <p className="text-xs text-slate-400">
                 Tracking shifts in Calm, Gratitude, and Inspiration over time
               </p>
             </div>
@@ -301,10 +301,10 @@ export const EmotionEvolutionView: React.FC<EmotionEvolutionViewProps> = ({
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 mr-1.5" /> Calm
               </span>
               <span className="flex items-center text-amber-400">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 mr-1.5" /> Gratitude
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 mr-1.5" /> Joy/Gratitude
               </span>
-              <span className="flex items-center text-purple-400">
-                <span className="w-2.5 h-2.5 rounded-full bg-purple-400 mr-1.5" /> Inspiration
+              <span className="flex items-center text-indigo-400">
+                <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 mr-1.5" /> Inspiration
               </span>
             </div>
           </div>
@@ -315,38 +315,38 @@ export const EmotionEvolutionView: React.FC<EmotionEvolutionViewProps> = ({
                 <AreaChart data={timelineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="calmGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.35}/>
                       <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                     </linearGradient>
                     <linearGradient id="gratitudeGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.35}/>
                       <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
                     </linearGradient>
                     <linearGradient id="inspGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#818cf8" stopOpacity={0.35}/>
+                      <stop offset="95%" stopColor="#818cf8" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#292524" vertical={false} />
-                  <XAxis dataKey="date" stroke="#78716c" fontSize={11} tickLine={false} />
-                  <YAxis domain={[0, 100]} stroke="#78716c" fontSize={11} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#373b47" vertical={false} />
+                  <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickLine={false} />
+                  <YAxis domain={[0, 100]} stroke="#94a3b8" fontSize={11} tickLine={false} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#1c1917', borderColor: '#44403c', borderRadius: '12px', color: '#f5f5f4', fontSize: '12px' }}
+                    contentStyle={{ backgroundColor: '#1c1e26', borderColor: '#373b47', borderRadius: '16px', color: '#f8fafc', fontSize: '12px' }}
                   />
                   <Area type="monotone" dataKey="calm" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#calmGrad)" name="Calm" />
                   <Area type="monotone" dataKey="gratitude" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#gratitudeGrad)" name="Gratitude" />
-                  <Area type="monotone" dataKey="inspiration" stroke="#a855f7" strokeWidth={2} fillOpacity={1} fill="url(#inspGrad)" name="Inspiration" />
+                  <Area type="monotone" dataKey="inspiration" stroke="#818cf8" strokeWidth={2} fillOpacity={1} fill="url(#inspGrad)" name="Inspiration" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center text-stone-500 space-y-2">
-                <Calendar className="w-8 h-8 text-stone-600" />
-                <p className="text-xs">No entries recorded in this timeframe yet.</p>
+              <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 space-y-2">
+                <Calendar className="w-8 h-8 text-slate-500" />
+                <p className="text-xs">No reflections recorded in this timeframe yet.</p>
                 <button
                   onClick={onNewEntry}
-                  className="text-xs text-amber-400 hover:text-amber-300 font-medium"
+                  className="text-xs text-amber-400 hover:text-amber-300 font-semibold"
                 >
-                  Write a new journal entry
+                  Write a new journal reflection
                 </button>
               </div>
             )}
@@ -354,12 +354,12 @@ export const EmotionEvolutionView: React.FC<EmotionEvolutionViewProps> = ({
         </div>
 
         {/* Emotion Balance Radar Chart (1 col) */}
-        <div className="bg-stone-900 border border-stone-800 rounded-3xl p-6 flex flex-col justify-between">
+        <div className="bg-[#242731] border border-[#373b47] rounded-3xl p-6 flex flex-col justify-between shadow-sm">
           <div>
-            <h3 className="font-serif font-bold text-base sm:text-lg text-stone-100">
+            <h3 className="font-serif font-bold text-base sm:text-lg text-slate-100">
               Emotional Balance Radar
             </h3>
-            <p className="text-xs text-stone-400">
+            <p className="text-xs text-slate-400">
               Harmony across 7 psychological dimensions
             </p>
           </div>
@@ -367,11 +367,11 @@ export const EmotionEvolutionView: React.FC<EmotionEvolutionViewProps> = ({
           <div className="h-64 w-full flex items-center justify-center my-2">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData} outerRadius="68%">
-                <PolarGrid stroke="#44403c" />
-                <PolarAngleAxis dataKey="emotion" stroke="#d6d3d1" fontSize={11} />
-                <PolarRadiusAxis domain={[0, 100]} stroke="#44403c" tick={{ fill: '#78716c', fontSize: 9 }} />
+                <PolarGrid stroke="#373b47" />
+                <PolarAngleAxis dataKey="emotion" stroke="#cbd5e1" fontSize={11} />
+                <PolarRadiusAxis domain={[0, 100]} stroke="#373b47" tick={{ fill: '#94a3b8', fontSize: 9 }} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#1c1917', borderColor: '#44403c', borderRadius: '12px', color: '#f5f5f4', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#1c1e26', borderColor: '#373b47', borderRadius: '16px', color: '#f8fafc', fontSize: '12px' }}
                   formatter={(val: any) => [`${val}%`, 'Intensity']}
                 />
                 <Radar
@@ -379,166 +379,99 @@ export const EmotionEvolutionView: React.FC<EmotionEvolutionViewProps> = ({
                   dataKey="value"
                   stroke="#f59e0b"
                   fill="#f59e0b"
-                  fillOpacity={0.4}
+                  fillOpacity={0.35}
                 />
               </RadarChart>
             </ResponsiveContainer>
           </div>
 
-          <p className="text-[11px] text-stone-400 text-center italic">
-            High values in Calm, Gratitude & Joy indicate grounded wellness.
+          <p className="text-[11px] text-slate-400 text-center italic">
+            Balanced values in Calm, Gratitude & Joy indicate healthy resilience.
           </p>
         </div>
       </div>
 
-      {/* Living Emotion Guides & Resonance Council */}
-      <div className="bg-stone-900/80 border border-stone-800 rounded-3xl p-6 sm:p-8 space-y-6 backdrop-blur-md shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-stone-800">
+      {/* Emotion Frequency Spectrum */}
+      <div className="bg-[#242731] border border-[#373b47] rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-[#373b47]">
           <div>
             <div className="flex items-center space-x-2 text-amber-400 text-xs font-semibold uppercase tracking-wider">
               <Waves className="w-4 h-4" />
-              <span>Inner Resonance Council</span>
+              <span>Emotional Frequency Distribution</span>
             </div>
-            <h3 className="font-serif text-xl sm:text-2xl font-bold text-stone-100 mt-1">
-              Your Emotion Guides & Their Gifts
+            <h3 className="font-serif text-xl sm:text-2xl font-bold text-slate-100 mt-1">
+              Distribution of Felt Emotions
             </h3>
-            <p className="text-xs text-stone-400 mt-0.5">
-              Every emotion serves a vital role in your life's harmony. Joy builds resilience, Serenity restores, Sadness heals, and Spark creates courage.
+            <p className="text-xs text-slate-400 mt-0.5">
+              Every feeling provides valuable feedback for mindful self-awareness.
             </p>
           </div>
         </div>
 
-        {/* Emotion Character Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {CHARACTER_LIST.map((char) => {
-            const count = filteredEntries.filter(e => (e.mood || 'peaceful') === char.id).length;
+        {/* Emotion Cards Grid with updated icons */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {EMOTIONS_LIST.map((emo) => {
+            const count = filteredEntries.filter(e => (e.mood || 'peaceful') === emo.id).length;
             const percentage = filteredEntries.length > 0 
               ? Math.round((count / filteredEntries.length) * 100) 
               : 0;
+            const IconComponent = emo.icon;
 
             return (
               <div
-                key={char.id}
-                className="rounded-2xl p-4.5 border transition-all duration-300 flex flex-col justify-between space-y-3"
+                key={emo.id}
+                className="bg-[#1c1e26] border border-[#373b47] rounded-2xl p-4 transition-all duration-300 flex flex-col justify-between space-y-3 shadow-sm hover:shadow-md"
                 style={{
-                  backgroundColor: char.primaryColor + '10',
-                  borderColor: char.primaryColor + '33',
-                  boxShadow: `0 0 16px ${char.glowColor}`
+                  boxShadow: `0 0 14px ${emo.glowColor}`
                 }}
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2.5">
                       <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-lg shadow-inner"
+                        className="w-9 h-9 rounded-full flex items-center justify-center shadow-inner"
                         style={{
-                          backgroundColor: char.primaryColor + '30',
-                          border: `1.5px solid ${char.primaryColor}`
+                          backgroundColor: emo.color + '26',
+                          border: `1.5px solid ${emo.color}`
                         }}
                       >
-                        {char.characterEmoji}
+                        <IconComponent className="w-4 h-4" style={{ color: emo.color }} />
                       </div>
                       <div>
-                        <h4 className="text-sm font-bold text-stone-100">
-                          {char.name}
+                        <h4 className="text-sm font-bold text-slate-100">
+                          {emo.label}
                         </h4>
-                        <span className="text-[10px] text-stone-400 block">
-                          {char.characterTitle}
+                        <span className="text-[10px] text-slate-400 block">
+                          {emo.description}
                         </span>
                       </div>
                     </div>
 
                     <div className="text-right">
-                      <span className="text-xs font-bold text-stone-200">
+                      <span className="text-xs font-bold text-slate-200">
                         {percentage}%
                       </span>
-                      <span className="text-[10px] text-stone-500 block">
+                      <span className="text-[10px] text-slate-400 block">
                         {count} memories
                       </span>
                     </div>
                   </div>
-
-                  <p className="text-xs text-stone-300 italic font-serif leading-relaxed">
-                    {char.quote}
-                  </p>
                 </div>
 
-                <div className="pt-2 border-t border-stone-800/60 flex items-center justify-between text-[11px] text-stone-400">
-                  <span className="truncate max-w-[170px] text-stone-300">
-                    &bull; {char.whisper}
-                  </span>
-                  <span 
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: char.primaryColor }}
-                    title={char.personality}
-                  />
+                <div className="pt-2 border-t border-[#373b47]/60 flex items-center justify-between text-[11px] text-slate-400">
+                  <div className="h-1.5 w-36 bg-[#242731] rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${percentage}%`, backgroundColor: emo.color }}
+                    />
+                  </div>
+                  <span className="font-semibold text-slate-300">{count} logged</span>
                 </div>
               </div>
             );
           })}
         </div>
       </div>
-
-      {/* Core Memory Spheres Shelf (Long-Term Memory Vault) */}
-      {filteredEntries.length > 0 && (
-        <div className="bg-stone-900/80 border border-stone-800 rounded-3xl p-6 sm:p-8 space-y-4 backdrop-blur-md shadow-xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center space-x-2 text-purple-400 text-xs font-semibold uppercase tracking-wider">
-                <Disc className="w-4 h-4" />
-                <span>Long-Term Memory Vault</span>
-              </div>
-              <h3 className="font-serif text-lg sm:text-xl font-bold text-stone-100 mt-1">
-                Glowing Core Memory Spheres
-              </h3>
-              <p className="text-xs text-stone-400">
-                Each reflection is a preserved memory orb radiating its emotional current.
-              </p>
-            </div>
-            <span className="text-xs text-stone-400">
-              {filteredEntries.length} Core Orbs
-            </span>
-          </div>
-
-          {/* Spheres Row */}
-          <div className="flex flex-wrap gap-3 pt-2">
-            {filteredEntries.map((e) => {
-              const char = getCharacterForMood(e.mood);
-              const dateStr = new Date(e.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-              return (
-                <div
-                  key={e.id}
-                  className="group relative flex items-center space-x-2.5 bg-stone-950/80 hover:bg-stone-900 border border-stone-800 rounded-2xl p-2.5 pr-4 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md"
-                  style={{
-                    borderColor: char.primaryColor + '40',
-                    boxShadow: `0 0 12px ${char.glowColor}`
-                  }}
-                  title={`${e.title || 'Reflection'} (${char.name})`}
-                >
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-md transition transform group-hover:scale-110"
-                    style={{
-                      backgroundColor: char.primaryColor + '33',
-                      border: `2px solid ${char.primaryColor}`,
-                      boxShadow: `0 0 10px ${char.glowColor}`
-                    }}
-                  >
-                    {char.characterEmoji}
-                  </div>
-                  <div className="max-w-[140px]">
-                    <h5 className="text-xs font-bold text-stone-200 truncate group-hover:text-amber-300 transition">
-                      {e.title || 'Quiet Reflection'}
-                    </h5>
-                    <p className="text-[10px] text-stone-400 truncate">
-                      {dateStr} &middot; {char.name}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Evolution Summary Modal */}
       <EmotionEvolutionSummaryModal

@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile representation in the mindful journal application",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Unique user ID"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address if authenticated via Google"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name"
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Avatar URL"
+        },
+        "isAnonymous": {
+          "type": "boolean",
+          "description": "Whether the session is a guest session"
+        }
+      },
+      "required": ["uid"]
+    },
+    "JournalEntry": {
+      "title": "JournalEntry",
+      "description": "A mindful reflection journal entry",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the journal entry"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user ID"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the journal reflection"
+        },
+        "content": {
+          "type": "string",
+          "description": "Journal text body"
+        },
+        "originalTranscript": {
+          "type": "string",
+          "description": "Original voice transcription before translation"
+        },
+        "languageDetected": {
+          "type": "string",
+          "description": "Detected spoken Indian language code"
+        },
+        "mood": {
+          "type": "string",
+          "description": "Associated emotion/mood"
+        },
+        "tags": {
+          "type": "array",
+          "description": "List of tags associated with entry"
+        },
+        "photos": {
+          "type": "array",
+          "description": "Attached photographs"
+        },
+        "location": {
+          "type": "object",
+          "description": "Tagged place or geo-location"
+        },
+        "audioRecordingUrl": {
+          "type": "string",
+          "description": "Audio memo data URL or link"
+        },
+        "audioDuration": {
+          "type": "number",
+          "description": "Audio recording duration in seconds"
+        },
+        "chatMessages": {
+          "type": "array",
+          "description": "Interactive reflections chat conversation messages"
+        },
+        "emotionAnalysis": {
+          "type": "object",
+          "description": "Sentiment and emotion breakdown details"
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Creation timestamp in milliseconds"
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Last updated timestamp in milliseconds"
+        }
+      },
+      "required": ["id", "userId", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/entries/{entryId}": {
+      "schema": "JournalEntry",
+      "description": "Private journal entries isolated per user"
+    }
+  }
+}

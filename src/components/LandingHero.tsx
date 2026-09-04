@@ -11,12 +11,17 @@ import {
   MessageSquareHeart,
   ArrowRight,
   Languages,
-  Database,
   Waves,
-  Heart
+  Heart,
+  AlertTriangle,
+  Copy,
+  Check,
+  ExternalLink,
+  BookOpen
 } from 'lucide-react';
 import { loginWithGoogle, loginAsGuest } from '../lib/authService';
-import { CHARACTER_LIST, EmotionCharacter } from '../lib/emotionCharacters';
+import { EMOTIONS_LIST, getEmotionMeta } from '../lib/emotionIcons';
+import firebaseConfig from '../../firebase-applet-config.json';
 
 interface LandingHeroProps {
   onAuthSuccess: () => void;
@@ -25,26 +30,44 @@ interface LandingHeroProps {
 export const LandingHero: React.FC<LandingHeroProps> = ({ onAuthSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [activePreviewChar, setActivePreviewChar] = useState<EmotionCharacter>(CHARACTER_LIST[0]);
+  const [isUnauthorizedDomain, setIsUnauthorizedDomain] = useState(false);
+  const [copiedDomain, setCopiedDomain] = useState(false);
+
+  const currentHostname = typeof window !== 'undefined' ? window.location.hostname : '';
+  const firebaseProjectId = firebaseConfig.projectId || 'silicon-park-505415-s7';
+  const authorizedDomainsUrl = `https://console.firebase.google.com/project/${firebaseProjectId}/authentication/settings`;
+
+  const copyDomain = () => {
+    if (navigator.clipboard && currentHostname) {
+      navigator.clipboard.writeText(currentHostname);
+      setCopiedDomain(true);
+      setTimeout(() => setCopiedDomain(false), 2000);
+    }
+  };
 
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
       setErrorMsg(null);
+      setIsUnauthorizedDomain(false);
       await loginWithGoogle();
       onAuthSuccess();
     } catch (err: any) {
-      console.error('Login error:', err);
-      if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user' || err.message?.includes('popup')) {
-        setErrorMsg('Sign-in popup was closed. You can also sign in as a guest to test the journal immediately.');
-      } else if (err.code === 'auth/operation-not-allowed') {
-        setErrorMsg('Google Sign-In is not enabled in the Firebase console. Please enable it under Authentication → Sign-in method → Google.');
-      } else if (err.code === 'auth/unauthorized-domain') {
-        setErrorMsg('This domain is not authorised in Firebase. Add it under Authentication → Settings → Authorised domains.');
-      } else if (err.code === 'auth/invalid-api-key') {
+      console.warn('Login notice:', err?.message || err);
+      const code = err.code || '';
+      const msg = err.message || '';
+
+      if (code === 'auth/unauthorized-domain' || msg.includes('unauthorized-domain')) {
+        setIsUnauthorizedDomain(true);
+        setErrorMsg('Domain authorization is required in Firebase for Google OAuth popup.');
+      } else if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user' || msg.includes('popup')) {
+        setErrorMsg('Sign-in popup was closed or blocked. You can explore as a guest immediately.');
+      } else if (code === 'auth/operation-not-allowed') {
+        setErrorMsg('Google Sign-In is not enabled in the Firebase console.');
+      } else if (code === 'auth/invalid-api-key') {
         setErrorMsg('Invalid Firebase API key. Check your firebase-applet-config.json.');
       } else {
-        setErrorMsg(`Sign-In failed: ${err.message || 'Unknown error'}. You can continue as a Guest.`);
+        setErrorMsg(`Sign-In failed: ${msg || 'Unknown error'}. You can continue as a Guest.`);
       }
     } finally {
       setLoading(false);
@@ -66,21 +89,21 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ onAuthSuccess }) => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col justify-between pt-10 pb-28 px-4 sm:px-6 lg:px-8 bg-transparent text-stone-100 relative">
+    <div className="min-h-[calc(100vh-4rem)] flex flex-col justify-between pt-10 pb-28 px-4 sm:px-6 lg:px-8 bg-transparent text-slate-100 relative">
       <div className="max-w-5xl mx-auto w-full space-y-12">
         {/* Title */}
         <div className="text-center space-y-4 max-w-3xl mx-auto pt-4 pb-2">
-          <div className="inline-flex items-center space-x-2 bg-stone-900/80 border border-amber-500/30 px-3.5 py-1.5 rounded-full text-xs font-semibold text-amber-300 shadow-md backdrop-blur-md">
-            <Waves className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-            <span>The Flow of Life &bull; Emotion Companions</span>
+          <div className="inline-flex items-center space-x-2 bg-[#242731] border border-amber-500/30 px-3.5 py-1.5 rounded-full text-xs font-semibold text-amber-300 shadow-md backdrop-blur-md">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Mindful Journal &bull; Clarity & Insight</span>
           </div>
 
-          <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-stone-50 leading-tight">
+          <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-50 leading-tight">
             Your Private Sanctuary for Mindful Reflections
           </h1>
 
-          <p className="text-base sm:text-lg text-stone-300 font-normal leading-relaxed max-w-2xl mx-auto">
-            Experience feelings as living guides in the flow of life. Speak in any Indian language, attach photos & travels, and let your emotions flow like harmonic waves.
+          <p className="text-base sm:text-lg text-slate-300 font-normal leading-relaxed max-w-2xl mx-auto">
+            Write your thoughts, speak in your native Indian language, attach photos, and receive rich psychological insights and gentle reflections powered by Gemini AI.
           </p>
 
           {/* Authentication Actions */}
@@ -89,7 +112,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ onAuthSuccess }) => {
               id="landing-google-signin-btn"
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full sm:w-auto flex items-center justify-center space-x-3 bg-stone-50 hover:bg-white text-stone-900 font-semibold px-6 py-3.5 rounded-xl shadow-lg transition transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
+              className="w-full sm:w-auto flex items-center justify-center space-x-3 bg-slate-100 hover:bg-white text-slate-950 font-bold px-6 py-3.5 rounded-2xl shadow-lg transition transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 text-sm"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
@@ -110,217 +133,207 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ onAuthSuccess }) => {
                 />
               </svg>
               <span>{loading ? 'Authenticating...' : 'Sign in with Google'}</span>
-              <ArrowRight className="w-4 h-4 text-stone-500" />
+              <ArrowRight className="w-4 h-4 text-slate-500" />
             </button>
 
             <button
               id="landing-guest-signin-btn"
               onClick={handleGuestLogin}
               disabled={loading}
-              className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-stone-900/90 hover:bg-stone-800 text-stone-200 hover:text-white px-5 py-3.5 rounded-xl border border-stone-700 font-medium transition backdrop-blur-sm"
+              className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-[#242731] hover:bg-[#2d313d] text-slate-200 hover:text-white px-5 py-3.5 rounded-2xl border border-[#373b47] font-semibold text-sm transition"
             >
               <Sparkles className="w-4 h-4 text-amber-400" />
               <span>Explore as Guest</span>
             </button>
           </div>
 
-          {errorMsg && (
-            <p className="text-xs text-amber-400 bg-amber-950/40 border border-amber-800/60 p-2.5 rounded-lg max-w-md mx-auto">
+          {isUnauthorizedDomain ? (
+            <div className="bg-[#242731] border border-amber-500/40 rounded-2xl p-4 text-xs max-w-xl mx-auto text-left space-y-3 shadow-xl">
+              <div className="flex items-center space-x-2 text-amber-300 font-semibold">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>Firebase Authorized Domain Notice</span>
+              </div>
+              <p className="text-slate-300 leading-relaxed">
+                To sign in using Google OAuth popup in this environment, add this preview domain to your Firebase Console under <strong className="text-amber-200">Authentication &gt; Settings &gt; Authorized domains</strong>.
+              </p>
+              <div className="flex items-center justify-between bg-[#1c1e26] border border-[#373b47] rounded-xl px-3 py-2 font-mono text-[11px] text-amber-200">
+                <span className="truncate mr-2">{currentHostname}</span>
+                <button
+                  type="button"
+                  onClick={copyDomain}
+                  className="flex items-center space-x-1 text-slate-300 hover:text-white px-2 py-1 rounded bg-[#242731] hover:bg-[#2d313d] transition"
+                >
+                  {copiedDomain ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-[10px] text-emerald-400">Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span className="text-[10px]">Copy Domain</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <div className="pt-2 border-t border-[#373b47] flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                <a
+                  href={authorizedDomainsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center space-x-1 text-amber-400 hover:underline"
+                >
+                  <span>Open Firebase Settings</span>
+                  <ExternalLink className="w-3 h-3 ml-0.5" />
+                </a>
+                <button
+                  type="button"
+                  onClick={handleGuestLogin}
+                  className="text-amber-300 hover:text-amber-100 font-semibold underline"
+                >
+                  Or continue in Guest Mode &rarr;
+                </button>
+              </div>
+            </div>
+          ) : errorMsg ? (
+            <p className="text-xs text-amber-400 bg-[#242731] border border-amber-500/40 p-2.5 rounded-xl max-w-md mx-auto">
               {errorMsg}
             </p>
-          )}
+          ) : null}
         </div>
 
-        {/* Living Emotion Guides & Resonance Council Showcase */}
-        <div className="bg-stone-900/80 border border-stone-800/90 rounded-3xl p-6 sm:p-8 backdrop-blur-md shadow-2xl space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-stone-800">
+        {/* Emotion Spectrum Row */}
+        <div className="bg-[#242731] border border-[#373b47] rounded-3xl p-6 sm:p-8 backdrop-blur-md shadow-lg space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#373b47]">
             <div>
-              <div className="flex items-center space-x-2">
-                <span className="text-lg">✨</span>
-                <h2 className="font-serif text-xl sm:text-2xl font-bold text-stone-100">
-                  Inner Resonance Council
-                </h2>
+              <div className="flex items-center space-x-2 text-amber-400 text-xs font-semibold uppercase tracking-wider">
+                <Sparkles className="w-4 h-4" />
+                <span>Emotional Intelligence</span>
               </div>
-              <p className="text-xs text-stone-400 mt-0.5">
-                Emotions are not obstacles—they are living guides helping you navigate life's currents.
+              <h2 className="font-serif text-xl sm:text-2xl font-bold text-slate-100 mt-1">
+                Reflect on What Truly Matters
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Every feeling is a doorway to self-understanding and peace of mind.
               </p>
             </div>
           </div>
 
-          {/* Emotion Guides Row */}
+          {/* Emotion Badges */}
           <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2">
-            {CHARACTER_LIST.map((char) => {
-              const isSelected = activePreviewChar.id === char.id;
+            {EMOTIONS_LIST.map((emo) => {
+              const IconComponent = emo.icon;
               return (
-                <button
-                  key={char.id}
-                  onClick={() => setActivePreviewChar(char)}
-                  className={`flex flex-col items-center p-2.5 rounded-2xl border transition-all text-center ${
-                    isSelected
-                      ? 'bg-stone-800 border-amber-400 shadow-lg transform -translate-y-1'
-                      : 'bg-stone-950/40 border-stone-800/60 hover:bg-stone-800/60'
-                  }`}
-                  style={{
-                    boxShadow: isSelected ? `0 0 16px ${char.glowColor}` : 'none'
-                  }}
+                <div
+                  key={emo.id}
+                  className="flex flex-col items-center p-3 rounded-2xl border border-[#373b47] bg-[#1c1e26] text-center"
                 >
                   <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-lg mb-1.5 shadow-inner transition transform group-hover:scale-110"
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-lg mb-1.5 shadow-inner"
                     style={{
-                      backgroundColor: char.primaryColor + '30',
-                      border: `2px solid ${char.primaryColor}`,
-                      boxShadow: isSelected ? `0 0 10px ${char.glowColor}` : 'none'
+                      backgroundColor: emo.color + '25',
+                      border: `1.5px solid ${emo.color}`
                     }}
                   >
-                    {char.characterEmoji}
+                    <IconComponent className="w-4 h-4" style={{ color: emo.color }} />
                   </div>
-                  <span className="text-xs font-bold text-stone-200 truncate w-full">
-                    {char.name}
+                  <span className="text-xs font-bold text-slate-200 truncate w-full">
+                    {emo.label}
                   </span>
-                  <span className="text-[9px] text-stone-400 uppercase tracking-tighter truncate w-full">
-                    {char.personality.split('&')[0]}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Active Guide Spotlight Preview Card */}
-          <div 
-            className="rounded-2xl p-5 border transition-all duration-500 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
-            style={{
-              backgroundColor: activePreviewChar.primaryColor + '15',
-              borderColor: activePreviewChar.primaryColor + '40',
-              boxShadow: `0 0 24px ${activePreviewChar.glowColor}`
-            }}
-          >
-            <div className="flex items-center space-x-4">
-              <div 
-                className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0 shadow-xl"
-                style={{
-                  backgroundColor: activePreviewChar.primaryColor + '33',
-                  border: `2px solid ${activePreviewChar.primaryColor}`
-                }}
-              >
-                {activePreviewChar.characterEmoji}
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center space-x-2">
-                  <h3 className="font-serif text-lg font-bold text-stone-100">
-                    {activePreviewChar.name} &bull; <span className="font-normal text-stone-300">{activePreviewChar.characterTitle}</span>
-                  </h3>
-                  <span 
-                    className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                    style={{
-                      backgroundColor: activePreviewChar.primaryColor + '33',
-                      color: activePreviewChar.accentColor
-                    }}
-                  >
-                    {activePreviewChar.personality}
+                  <span className="text-[9px] text-slate-400 uppercase tracking-tighter truncate w-full">
+                    {emo.id}
                   </span>
                 </div>
-                <p className="text-xs text-stone-300 italic font-serif">
-                  {activePreviewChar.quote}
-                </p>
-              </div>
-            </div>
-
-            <div className="shrink-0 md:border-l md:border-stone-700/60 md:pl-5 max-w-sm">
-              <span className="text-[10px] uppercase font-bold text-stone-400 block tracking-wider">
-                Role in Your Life
-              </span>
-              <p className="text-xs text-stone-200 mt-0.5 leading-relaxed">
-                {activePreviewChar.description}
-              </p>
-            </div>
+              );
+            })}
           </div>
         </div>
 
         {/* 6 Feature Pillars Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-8">
           {/* Feature 1 */}
-          <div className="bg-stone-900/70 border border-stone-800/80 rounded-2xl p-5 hover:border-amber-500/40 transition backdrop-blur-sm">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center mb-3">
-              <MessageSquareHeart className="w-5 h-5" />
+          <div className="bg-[#242731] border border-[#373b47] rounded-3xl p-6 hover:border-amber-400/50 transition">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-400 border border-amber-500/25 flex items-center justify-center mb-3">
+              <Sparkles className="w-5 h-5" />
             </div>
-            <h3 className="font-semibold text-stone-100 text-base mb-1.5">
-              Interactive Reflections
+            <h3 className="font-semibold text-slate-100 text-base mb-1.5">
+              Mindful AI Reflections
             </h3>
-            <p className="text-xs text-stone-400 leading-relaxed">
-              Explore your thoughts with compassionate, thoughtful guidance, uncover emotional patterns, and brainstorm gentle next steps.
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Synthesize deep emotional growth insights, reflection questions, and practical micro-steps on demand.
             </p>
           </div>
 
           {/* Feature 2 */}
-          <div className="bg-stone-900/70 border border-stone-800/80 rounded-2xl p-5 hover:border-amber-500/40 transition backdrop-blur-sm">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center mb-3">
+          <div className="bg-[#242731] border border-[#373b47] rounded-3xl p-6 hover:border-amber-400/50 transition">
+            <div className="w-10 h-10 rounded-2xl bg-blue-500/15 text-blue-400 border border-blue-500/25 flex items-center justify-center mb-3">
               <Languages className="w-5 h-5" />
             </div>
-            <h3 className="font-semibold text-stone-100 text-base mb-1.5">
+            <h3 className="font-semibold text-slate-100 text-base mb-1.5">
               Indian Language Speech-to-Text
             </h3>
-            <p className="text-xs text-stone-400 leading-relaxed">
+            <p className="text-xs text-slate-400 leading-relaxed">
               Speak naturally in Hindi, Tamil, Telugu, Bengali, Marathi, Gujarati, Kannada, Malayalam, Punjabi, or Hinglish.
             </p>
           </div>
 
           {/* Feature 3 */}
-          <div className="bg-stone-900/70 border border-stone-800/80 rounded-2xl p-5 hover:border-amber-500/40 transition backdrop-blur-sm">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-3">
+          <div className="bg-[#242731] border border-[#373b47] rounded-3xl p-6 hover:border-amber-400/50 transition">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 flex items-center justify-center mb-3">
               <TrendingUp className="w-5 h-5" />
             </div>
-            <h3 className="font-semibold text-stone-100 text-base mb-1.5">
+            <h3 className="font-semibold text-slate-100 text-base mb-1.5">
               Emotion Evolution Analytics
             </h3>
-            <p className="text-xs text-stone-400 leading-relaxed">
+            <p className="text-xs text-slate-400 leading-relaxed">
               Track how your emotional state (Joy, Calm, Gratitude, Inspiration) evolves across weeks with radar charts and growth reports.
             </p>
           </div>
 
           {/* Feature 4 */}
-          <div className="bg-stone-900/70 border border-stone-800/80 rounded-2xl p-5 hover:border-amber-500/40 transition backdrop-blur-sm">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-3">
+          <div className="bg-[#242731] border border-[#373b47] rounded-3xl p-6 hover:border-amber-400/50 transition">
+            <div className="w-10 h-10 rounded-2xl bg-pink-500/15 text-pink-400 border border-pink-500/25 flex items-center justify-center mb-3">
               <ImageIcon className="w-5 h-5" />
             </div>
-            <h3 className="font-semibold text-stone-100 text-base mb-1.5">
+            <h3 className="font-semibold text-slate-100 text-base mb-1.5">
               Photo Memories & Albums
             </h3>
-            <p className="text-xs text-stone-400 leading-relaxed">
-              Attach photographs and albums to your journal entries. Generate mindful reflections inspired by your visual memories.
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Attach photographs to your journal entries. Enrich your thoughts with memorable visual moments.
             </p>
           </div>
 
           {/* Feature 5 */}
-          <div className="bg-stone-900/70 border border-stone-800/80 rounded-2xl p-5 hover:border-amber-500/40 transition backdrop-blur-sm">
-            <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center mb-3">
+          <div className="bg-[#242731] border border-[#373b47] rounded-3xl p-6 hover:border-amber-400/50 transition">
+            <div className="w-10 h-10 rounded-2xl bg-rose-500/15 text-rose-400 border border-rose-500/25 flex items-center justify-center mb-3">
               <MapPin className="w-5 h-5" />
             </div>
-            <h3 className="font-semibold text-stone-100 text-base mb-1.5">
+            <h3 className="font-semibold text-slate-100 text-base mb-1.5">
               Location & Travel Tagging
             </h3>
-            <p className="text-xs text-stone-400 leading-relaxed">
-              Pin where memories happened. Tag serene cafes, travel spots, hometowns, or current coordinates with direct interactive map previews.
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Pin where memories happened. Tag cafes, travel destinations, hometowns, or current coordinates.
             </p>
           </div>
 
           {/* Feature 6 */}
-          <div className="bg-stone-900/70 border border-stone-800/80 rounded-2xl p-5 hover:border-amber-500/40 transition backdrop-blur-sm">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mb-3">
+          <div className="bg-[#242731] border border-[#373b47] rounded-3xl p-6 hover:border-amber-400/50 transition">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 flex items-center justify-center mb-3">
               <Lock className="w-5 h-5" />
             </div>
-            <h3 className="font-semibold text-stone-100 text-base mb-1.5">
-              Private Sanctuary
+            <h3 className="font-semibold text-slate-100 text-base mb-1.5">
+              Private Cloud Storage
             </h3>
-            <p className="text-xs text-stone-400 leading-relaxed">
-              Your reflections, voice memos, and dialogues are protected and accessible exclusively to your private account.
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Your reflections and recordings are stored securely in Firestore and accessible only by you.
             </p>
           </div>
         </div>
       </div>
 
       {/* Footer info */}
-      <div className="text-center text-xs text-stone-500 border-t border-stone-800/80 pt-6">
-        Mindful Journal &bull; The Flow of Life Sanctuary &bull; Powered by Compassionate Reflection
+      <div className="text-center text-xs text-slate-400 border-t border-[#373b47] pt-6">
+        Mindful Journal &bull; Powered by Gemini AI &amp; Firebase
       </div>
     </div>
   );

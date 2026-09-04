@@ -13,6 +13,7 @@ import { JournalEditor } from './components/JournalEditor';
 import { EntryHistoryView } from './components/EntryHistoryView';
 import { EmotionEvolutionView } from './components/EmotionEvolutionView';
 import { EmotionWaveBackground } from './components/EmotionWaveBackground';
+import { AuthModal } from './components/AuthModal';
 import { RefreshCw } from 'lucide-react';
 
 export default function App() {
@@ -21,6 +22,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'write' | 'history' | 'evolution'>('write');
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authErrorNotice, setAuthErrorNotice] = useState<string | null>(null);
 
   // Initialize sample initial entry helper
   const createNewEntryObject = (userId: string): JournalEntry => ({
@@ -105,6 +108,27 @@ export default function App() {
     setActiveTab('write');
   };
 
+  const handleOpenAuthModal = (errorNotice?: string) => {
+    setAuthErrorNotice(errorNotice || null);
+    setIsAuthModalOpen(true);
+  };
+
+  const handleHeaderLoginClick = async () => {
+    try {
+      await loginWithGoogle();
+      setActiveTab('write');
+    } catch (err: any) {
+      console.warn('Google sign-in exception:', err);
+      const code = err.code || '';
+      const msg = err.message || '';
+      if (code === 'auth/unauthorized-domain' || msg.includes('unauthorized-domain')) {
+        handleOpenAuthModal('unauthorized-domain');
+      } else {
+        handleOpenAuthModal(msg || 'Sign in error');
+      }
+    }
+  };
+
   if (loadingAuth) {
     return (
       <div className="min-h-screen bg-stone-950 flex flex-col items-center justify-center text-stone-300 space-y-3">
@@ -125,8 +149,19 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onNewEntry={handleNewEntry}
-        onLoginClick={loginWithGoogle}
+        onLoginClick={handleHeaderLoginClick}
         onLogoutClick={logout}
+      />
+
+      {/* Auth Modal for Guided Sign-In and Domain Setup */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={() => {
+          setIsAuthModalOpen(false);
+          setActiveTab('write');
+        }}
+        initialError={authErrorNotice}
       />
 
       {/* Main Content Body */}

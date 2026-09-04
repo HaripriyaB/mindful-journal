@@ -44,23 +44,26 @@ function notifySubscribers(user: UserProfile | null, loading: boolean = false) {
 }
 
 export async function loginWithGoogle(): Promise<UserProfile> {
+  // Clear any existing local guest session first
+  setStoredLocalGuest(null);
+
   try {
     const result = await signInWithPopup(auth, googleAuthProvider);
     const user = result.user;
-    // Clear local guest if any
-    setStoredLocalGuest(null);
     
     const profile: UserProfile = {
       uid: user.uid,
       email: user.email,
       displayName: user.displayName || user.email?.split('@')[0] || 'Journaler',
       photoURL: user.photoURL,
-      isAnonymous: false
+      isAnonymous: false,
+      domainUnauthorized: false
     };
     notifySubscribers(profile, false);
     return profile;
   } catch (error: any) {
-    console.error('Google Sign-In Error:', error);
+    console.warn('Google Sign-In warning/notice:', error?.message || error);
+    // Propagate error to let UI display accurate feedback / domain settings
     throw error;
   }
 }
