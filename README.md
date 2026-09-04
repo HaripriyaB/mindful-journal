@@ -66,6 +66,95 @@ npm start
 | `GEMINI_API_KEY` | Enables all AI features. Without it, every feature falls back to a local heuristic equivalent. |
 | `PORT` | Port to bind to (defaults to `3000`; platforms like Cloud Run inject this automatically). |
 
+## Deploy to Cloud Run
+
+The repository includes a multi-stage [`Dockerfile`](Dockerfile) that builds the Vite client and Express server into one Cloud Run container. The service listens on the `PORT` supplied by Cloud Run.
+
+### Prerequisites
+
+- A Google Cloud project with billing enabled.
+- The [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) installed and authenticated with `gcloud auth login`.
+- A Gemini API key. Do not commit it to the repository or add it to `firebase-applet-config.json`.
+
+### Deploy
+
+Replace `YOUR_PROJECT_ID` with your Google Cloud project ID, then run the following from the repository root:
+
+```bash
+gcloud config set project YOUR_PROJECT_ID
+
+gcloud services enable \
+  run.googleapis.com \
+  cloudbuild.googleapis.com \
+  artifactregistry.googleapis.com \
+  secretmanager.googleapis.com
+
+gcloud secrets create gemini-api-key --replication-policy=automatic
+```
+
+Create a first secret version using the value from your local `.env` file. This command deliberately reads the key from your shell rather than writing it into source control:
+
+```bash
+set -a
+source .env
+set +a
+printf '%s' "$GEMINI_API_KEY" | gcloud secrets versions add gemini-api-key --data-file=-
+```
+
+Deploy the application as a public Cloud Run service. `--source .` uses the repository's Dockerfile to build the container, and `--set-secrets` makes the API key available only at runtime.
+
+```bash
+gcloud run deploy mindful-journal \
+  --source . \
+  --region asia-south1 \
+  --allow-unauthenticated \
+  --labels dev-tutorial=cloud-run-ai-challenge \
+  --set-secrets GEMINI_API_KEY=gemini-api-key:latest
+```
+
+If Cloud Run requests it, grant the deployed service's runtime service account the **Secret Manager Secret Accessor** role for `gemini-api-key`. After deployment, the CLI prints the public `https://...run.app` URL.
+
+Verify the health endpoint and the required service label:
+
+```bash
+curl "https://YOUR_CLOUD_RUN_URL/api/health"
+
+gcloud run services describe mindful-journal \
+  --region asia-south1 \
+  --format="value(metadata.labels.dev-tutorial)"
+```
+
+The label command must print `cloud-run-ai-challenge`. Add the deployed `run.app` domain to **Firebase Authentication → Settings → Authorized domains** if Google sign-in is enabled.
+
+### Deploying updates
+
+After committing a change, redeploy with the same `gcloud run deploy` command. Cloud Run creates a new revision and retains the configured secret and service label when they are included in the command.
+
+## Firestore security rules
+
+The Firestore security rules are version-controlled in [`firestore.rules`](firestore.rules). They enforce owner-only access: an authenticated user may access only their own profile, journal entries, and insights under `/users/{userId}`. No public Firestore reads or writes are permitted.
+
+```text
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /entries/{entryId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /insights/{insightId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}
+```
+
+To deploy the rules, open the Firebase console for the project, select the Firestore database used by the app, open the **Rules** tab, paste the contents of `firestore.rules`, and click **Publish**. Test both anonymous/guest and Google-authenticated users after publishing: each user should be able to create and read only their own data.
+
 ## API overview
 
 All AI endpoints live under `/api/gemini/*` and are designed to **never fail hard** — each returns a sensible fallback payload on any error:
